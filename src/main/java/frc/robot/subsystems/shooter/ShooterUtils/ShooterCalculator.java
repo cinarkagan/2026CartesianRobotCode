@@ -52,39 +52,22 @@ public class ShooterCalculator {
     {
 
         double wheelSpeed = flywheelRPMFormula(commandSwerveDrivetrain.getDistanceToHub());
+        
+        SmartDashboard.putNumber("WheelSpeedShootCalculated", wheelSpeed);
 
-
-
-
-        wheelSpeed = Math.max(ShooterConstants.MIN_FLYWHEEL_SPEED.in(RotationsPerSecond), Math.min(wheelSpeed, ShooterConstants.MAX_FLYWHEEL_SPEED.in(RotationsPerSecond))); // Clamp between min and max wheel speeds
-
+        wheelSpeed = MathUtil.clamp(wheelSpeed, ShooterConstants.MIN_FLYWHEEL_SPEED, ShooterConstants.MAX_FLYWHEEL_SPEED);
         return wheelSpeed;
-        //return RotationsPerSecond.of(35);
     }
 
     public double calculatePassRPMFromCurrentPose()
     {
         double wheelSpeed = pasRPMFormula(commandSwerveDrivetrain.getXDistanceToHub());
 
-        //wheelSpeed /= ShooterConstants.SHOOTER_VELOCITY_TRANSFER_COEFFICIENT;
+        SmartDashboard.putNumber("WheelSpeedPassCalculated", wheelSpeed);
 
-        //SmartDashboard.putNumber("WheelSpeedCalculated", wheelSpeed);
-
-
-        //if(SmartDashboard.getBoolean("UseManualShooterValues", false))
-        //{
-          //  wheelSpeed = SmartDashboard.getNumber("ManualFlywheelRpm", wheelSpeed);
-        //}
-        //SmartDashboard.putNumber("Conf/CalcPassRPM", TelemetryConstants.roundTelemetry(wheelSpeed));
-
-        wheelSpeed /= 60;
-
-
-
-        wheelSpeed = Math.max(ShooterConstants.MIN_FLYWHEEL_SPEED.in(RotationsPerSecond), Math.min(wheelSpeed, ShooterConstants.MAX_FLYWHEEL_SPEED.in(RotationsPerSecond))); // Clamp between min and max wheel speeds
+        wheelSpeed = MathUtil.clamp(wheelSpeed, ShooterConstants.MIN_FLYWHEEL_SPEED, ShooterConstants.MAX_FLYWHEEL_SPEED);
 
         return wheelSpeed;
-        //return RotationsPerSecond.of(35);
     }
 
     public double calculateRestFlywheelSpeedFromCurrentPose()

@@ -10,17 +10,17 @@ import frc.robot.utils.AllStates.ShooterStates;
 
 public class MachineSubsystem {
     LocalizationSubsystem localizationSubsystem;
-    ShooterSubsystem shooterSubsystem;
+    //ShooterSubsystem shooterSubsystem;
 
     public AllStates.MachineStates  currentState = MachineStates.IDLE;
     public AllStates.MachineStates requestedState = MachineStates.IDLE;
     CommandSwerveDrivetrain drivetrain;
     public MachineSubsystem(CommandSwerveDrivetrain drivetrain){
         this.drivetrain = drivetrain;
-        this.shooterSubsystem = new ShooterSubsystem();
+        //this.shooterSubsystem = new ShooterSubsystem(drivetrain);
         this.localizationSubsystem = new LocalizationSubsystem(drivetrain);
     }
 
-    public ShooterSubsystem getShooterSubsystem() { return shooterSubsystem; }
+    //public ShooterSubsystem getShooterSubsystem() { return shooterSubsystem; }
     public LocalizationSubsystem getLocalizationSubsystem() { return localizationSubsystem; }
 }

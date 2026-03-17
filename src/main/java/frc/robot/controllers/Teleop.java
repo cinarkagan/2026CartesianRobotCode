@@ -16,6 +16,10 @@ import frc.robot.commands.TurnToAngle;
 import frc.robot.constants.TeleopConstants;
 import frc.robot.subsystems.shooter.ShooterSimulation;
 import frc.robot.subsystems.shooter.ShooterSubsystem;
+import frc.robot.subsystems.shooter.ShooterActions.ShooterIdleActionCommand;
+import frc.robot.subsystems.shooter.ShooterActions.ShooterKillActionCommand;
+import frc.robot.subsystems.shooter.ShooterRequests.ShooterIdleRequestCommand;
+import frc.robot.subsystems.shooter.ShooterRequests.ShooterShootRequestCommand;
 import frc.robot.subsystems.swerve.CommandSwerveDrivetrain;
 import frc.robot.utils.AllStates;
 import frc.robot.utils.Container;
@@ -27,12 +31,8 @@ public class Teleop implements Controller {
     //private final SlewRateLimiter limiter = new SlewRateLimiter(0.8);
     private CommandSwerveDrivetrain drivetrain;
     private CommandXboxController joystick;
+    private ShooterSimulation shooterSimulationTest;
     //private Joystick joystick;
-    private SwerveRequest.FieldCentric drive = new SwerveRequest.FieldCentric()
-            .withDeadband(TeleopConstants.MaxSpeed * 0.1).withRotationalDeadband(TeleopConstants.MaxAngularRate * 0.1) // Add a 10% deadband
-            .withDriveRequestType(DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
-    private final SwerveRequest.SwerveDriveBrake brake = new SwerveRequest.SwerveDriveBrake();
-    private final SwerveRequest.PointWheelsAt point = new SwerveRequest.PointWheelsAt();
     private MachineSubsystem machineSubsystem;
     public Teleop(Telemetry logger,CommandSwerveDrivetrain drivetrain, MachineSubsystem machineSubsystem) {
         this.logger = logger;
@@ -40,6 +40,7 @@ public class Teleop implements Controller {
         //this.joystick = new Joystick(0);
         this.joystick = new CommandXboxController(0);
         this.machineSubsystem = machineSubsystem;
+        this.shooterSimulationTest = new ShooterSimulation(drivetrain);
     }
     @Override
     public void getInitializeFunction() {
@@ -52,11 +53,7 @@ public class Teleop implements Controller {
             // and Y is defined as to the left according to WPILib convention.
             if (driveEnabled) {
                 drivetrain.setDefaultCommand(
-                    drivetrain.applyRequest(() ->
-                        drive.withVelocityX(joystick.getLeftY() * TeleopConstants.MaxSpeed) // Drive forward with negative Y (forward)
-                            .withVelocityY(joystick.getLeftX() * TeleopConstants.MaxSpeed) // Drive left with negative X (left)
-                            .withRotationalRate(-joystick.getRightX() * TeleopConstants.MaxAngularRate)// Drive counterclockwise with negative X (left)
-                    )
+                    drivetrain.teleopDriveCommand(joystick)
                 );
             }
             /*if (driveEnabled) {
@@ -94,6 +91,8 @@ public class Teleop implements Controller {
             // Reset the field-centric heading on left bumper press.
             //joystick.leftBumper().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
             //joystick.leftBumper().onTrue(new InstantCommand(()->{shooterSimulation.launchFuel();}));
+            joystick.a().whileTrue(new ShooterIdleRequestCommand(shooterSimulationTest));
+            joystick.b().whileTrue(new ShooterShootRequestCommand(shooterSimulationTest));
         }
         drivetrain.registerTelemetry(logger::telemeterize);
     }

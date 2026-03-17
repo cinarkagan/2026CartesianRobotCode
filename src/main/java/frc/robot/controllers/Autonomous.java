@@ -66,8 +66,7 @@ public class Autonomous implements Controller {
             new WaitCommand(2),
             intakeSimulation.intakeBallWithRandomness(20),
             intakeSimulation.deactivateIntakeCommand(),
-            AutoBuilder.followPath(path2),
-            shooterSimulation.launchFuelWithRandomnessCommand()
+            AutoBuilder.followPath(path2)
         );
     }
 

@@ -1,155 +1,131 @@
 package frc.robot.subsystems.shooter;
 
-import java.util.Random;
+import static edu.wpi.first.units.Units.*;
 
-import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.VelocityVoltage;
-
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Translation3d;
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.LinearVelocity;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.constants.ShooterConstants;
-import frc.robot.constants.SimulationConstants;
-import frc.robot.subsystems.shooter.ShooterUtils.BallKinematics;
+import frc.robot.subsystems.shooter.ShooterActions.ShooterIdleActionCommand;
+import frc.robot.subsystems.shooter.ShooterActions.ShooterKillActionCommand;
+import frc.robot.subsystems.shooter.ShooterActions.ShooterLowPowerActionCommand;
+import frc.robot.subsystems.shooter.ShooterActions.ShooterReverseActionCommand;
+import frc.robot.subsystems.shooter.ShooterActions.ShooterShootActionCommand;
+import frc.robot.subsystems.shooter.ShooterUtils.ShooterCalculator;
 import frc.robot.subsystems.swerve.CommandSwerveDrivetrain;
 import frc.robot.utils.AllStates;
 import frc.robot.utils.AllStates.ShooterStates;
-import frc.robot.utils.Container;
-import frc.robot.utils.FuelSim;
+
+import com.revrobotics.PersistMode;
+import com.revrobotics.ResetMode;
+import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.SparkBase.ControlType;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import com.revrobotics.spark.config.SparkMaxConfig;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.ClosedLoopSlot;
+import com.revrobotics.spark.FeedbackSensor;
 
 public class ShooterSimulation extends Shooter {
-    CommandSwerveDrivetrain drivetrain;
-    
+
     public double goalRPM = ShooterConstants.IDLE_RPM;
-    public double goalRPM2 = -ShooterConstants.IDLE_RPM;
-
-    public AllStates.ShooterStates currentState = ShooterStates.IDLE;
+    public AllStates.ShooterStates currentState   = ShooterStates.IDLE;
     public AllStates.ShooterStates requestedState = ShooterStates.IDLE;
-    public AllStates.ShooterStates lastState = ShooterStates.IDLE;
+    public AllStates.ShooterStates lastState      = ShooterStates.IDLE;
 
-    public ShooterSimulation(CommandSwerveDrivetrain drivetrain) {
-        this.drivetrain = drivetrain;
-    }
-    public void launchFuel() {
-        if (Container.fuelCount == 0) return;
-        Container.decreaseFuel();
-        Pose2d robot = drivetrain.getStateCopy().Pose;
+    // Action Commands
+    private ShooterIdleActionCommand shooterIdleActionCommand;
+    private ShooterKillActionCommand shooterKillActionCommand;
+    private ShooterLowPowerActionCommand shooterLowPowerActionCommand;
+    private ShooterShootActionCommand shooterShootActionCommand;
+    private ShooterReverseActionCommand shooterReverseActionCommand;
 
-        Translation3d initialPosition = new Translation3d(robot.getTranslation().getX(),robot.getTranslation().getY(),SimulationConstants.ShooterConstants.ShooterHeight);
-        FuelSim.getInstance().spawnFuel(initialPosition, getLaunchVelocities(robot,goalRPM));//launchVel(vel, angle) with calc
-    }
-    public Command launchFuelCommand() {
-        return new InstantCommand(()->{launchFuel();});
-    }
-    public Command launchFuelWithRandomnessCommand() {
-        return new Command() {
-            private long startTime;
-            private int amountToShoot;
-            private int ballsShot;
-            private final long DELAY_MS = 50;
+    private final ShooterCalculator shooterCalc;
 
-            @Override
-            public void initialize() {
-                if (Container.fuelCount > 0) {
-                    startTime = System.currentTimeMillis();
-                    
-                    Random random = new Random();
-                    double percentage = random.nextInt(100) / 100.0;
-                    amountToShoot = (int) (Container.fuelCount * percentage) + 1;
-                    
-                    ballsShot = 0;
-                } else {
-                    amountToShoot = 0;
-                }
-            }
+    //TODO: PID Configleri constantsa çek(claude yapar)
 
-            @Override
-            public void execute() {
-                if (amountToShoot == 0) return;
-                long elapsed = System.currentTimeMillis() - startTime;
-                if (ballsShot < amountToShoot && elapsed > (ballsShot * DELAY_MS)) {
-                    launchFuel();
-                    ballsShot++;
-                }
-            }
-
-            @Override
-            public boolean isFinished() {
-                return ballsShot >= amountToShoot;
-            }
-
-            @Override
-            public void end(boolean interrupted) {
-                Container.fuelCount = 0;
-            }
-        };
-    }
-    public Translation3d getLaunchVelocities(Pose2d robot,double rpm) {
-        double heading = robot.getRotation().getRadians();
-        double total = BallKinematics.totalBallVelocity(rpm);
-        double y = BallKinematics.getVy(total);
-        double x = BallKinematics.getVx(total, heading);
-        double z = BallKinematics.getVz(total, heading);
-        SmartDashboard.putNumber("Calc Y",y);
-        SmartDashboard.putNumber("Calc X",x);
-        SmartDashboard.putNumber("Calc Z",z);
-
-        return new Translation3d(x,y,z);
+    public ShooterSimulation(CommandSwerveDrivetrain commandSwerveDrivetrain) {
+        shooterCalc = new ShooterCalculator(commandSwerveDrivetrain);
+        // Action Commands
+        shooterIdleActionCommand     = new ShooterIdleActionCommand(this);
+        shooterKillActionCommand     = new ShooterKillActionCommand(this);
+        shooterLowPowerActionCommand = new ShooterLowPowerActionCommand(this);
+        shooterShootActionCommand    = new ShooterShootActionCommand(this);
+        shooterReverseActionCommand  = new ShooterReverseActionCommand(this);
     }
 
     @Override
     public void periodic() {
         stateMachine();
+        rpmControl();
+        if (SmartDashboard.getBoolean("ShooterTelemetry", true)||SmartDashboard.getBoolean("AllTelemetry", false)) {telemetrize();}
     }
-    public boolean isAtRPM(){
-        return true;
-    }
-    public double getRPM() { return goalRPM*1.5; } //gear ratio
-    public double getRPMHood() { return goalRPM2*2; } //gear ratio
-    public double getRPMFlywheel() { return goalRPM2; } //gear ratio
 
-    public void stateMachine() {
-        if (currentState == requestedState){
-                switch(currentState) {
-                    case IDLE:
-                        goalRPM = ShooterConstants.IDLE_RPM;
-                        break;
-                    case KILL:
-                        goalRPM = 0;
-                        break;
-                    case LOW_POWER:
-                        goalRPM = ShooterConstants.LOW_POWER_RPM;
-                        break;
-                    case SHOOT:
-                        goalRPM = 0;
-                        break;
-                    case REVERSE:
-                        goalRPM = ShooterConstants.REVERSE_RPM;
-                        break;
-
-                }
-        } else {
-            lastState = currentState;
-            currentState = requestedState;
-            stateMachine();
-        }
+    public void telemetrize() {
+        SmartDashboard.putNumber("Shooter/RPM1", getVelocityShooter1());
+        SmartDashboard.putNumber("Shooter/RPM2", getVelocityShooter2());
+        SmartDashboard.putNumber("Shooter/RPM3", getVelocityShooter3());
+        SmartDashboard.putNumber("Shooter/RPM4", getVelocityShooter4());
+        SmartDashboard.putNumber("Shooter/RPM5", getVelocityShooter5());
+        SmartDashboard.putNumber("Shooter/RPM6", getVelocityShooter6());
+        SmartDashboard.putNumber("Shooter/RPM Average", getAverageRPM());
+        SmartDashboard.putNumber("Shooter/RPM Goal", getRPMGoal());
+        SmartDashboard.putBoolean("Shooter/Is At RPM", isAtRPM());
+        SmartDashboard.putString("Shooter/Current State", currentState.toString());
+        SmartDashboard.putString("Shooter/Requested State", requestedState.toString());
     }
+
+    // ── RPM Control ───────────────────────────────────────────────────────────
+    public void rpmControl() {    }
+
     @Override
-    public void requestState(AllStates.ShooterStates state) {
-        requestedState = state;
+    public boolean isAtRPM() {
+        return isMotorAtRPM(getVelocityShooter1())
+            && isMotorAtRPM(getVelocityShooter2())
+            && isMotorAtRPM(getVelocityShooter3())
+            && isMotorAtRPM(getVelocityShooter4())
+            && isMotorAtRPM(getVelocityShooter5())
+            && isMotorAtRPM(getVelocityShooter6());
     }
+
+    private boolean isMotorAtRPM(double velocity) {
+        return velocity > (goalRPM - ShooterConstants.rpmTol)
+            && velocity < (goalRPM + ShooterConstants.rpmTol);
+    }
+
+public void stateMachine() {
+    if (currentState == requestedState) {
+        switch (currentState) {
+            case IDLE:
+                if (!shooterIdleActionCommand.isScheduled())
+                    CommandScheduler.getInstance().schedule(shooterIdleActionCommand);
+                break;
+            case KILL:
+                if (!shooterKillActionCommand.isScheduled())
+                    CommandScheduler.getInstance().schedule(shooterKillActionCommand);
+                break;
+            case LOW_POWER:
+                if (!shooterLowPowerActionCommand.isScheduled())
+                    CommandScheduler.getInstance().schedule(shooterLowPowerActionCommand);
+                break;
+            case SHOOT:
+                if (!shooterShootActionCommand.isScheduled())
+                    CommandScheduler.getInstance().schedule(shooterShootActionCommand);
+                break;
+            case REVERSE:
+                if (!shooterReverseActionCommand.isScheduled())
+                    CommandScheduler.getInstance().schedule(shooterReverseActionCommand);
+                break;
+        }
+    } else {
+        lastState = currentState;
+        currentState = requestedState;
+        stateMachine();
+    }
+}
 
     @Override
     public void shooterIdle() {
-        goalRPM = ShooterConstants.IDLE_RPM;
+        goalRPM = shooterCalc.calculateRestFlywheelSpeedFromCurrentPose();
     }
 
     @Override
@@ -164,11 +140,35 @@ public class ShooterSimulation extends Shooter {
 
     @Override
     public void shooterShoot() {
-        goalRPM = 0;
+        goalRPM = shooterCalc.calculateFlywheelRPMFromCurrentPose();
     }
 
     @Override
     public void shooterReverse() {
         goalRPM = ShooterConstants.REVERSE_RPM;
+    }
+
+    @Override
+    public void requestState(ShooterStates state) {
+        requestedState = state;
+    }
+
+    public double getRPMGoal()     { return goalRPM; }
+
+    public double getRPMFlywheel() { return getAverageRPM() / ShooterConstants.flywheelGearRatio; }
+
+    public double getVelocityShooter1() { return goalRPM;}
+    public double getVelocityShooter2() { return goalRPM; }
+    public double getVelocityShooter3() { return goalRPM; }
+    public double getVelocityShooter4() { return goalRPM; }
+    public double getVelocityShooter5() { return goalRPM; }
+    public double getVelocityShooter6() { return goalRPM; }
+    public double getAverageRPM() {
+        return (getVelocityShooter1()
+            + getVelocityShooter2()
+            + getVelocityShooter3()
+            + getVelocityShooter4()
+            + getVelocityShooter5()
+            + getVelocityShooter6()) / 6.0;
     }
 }
