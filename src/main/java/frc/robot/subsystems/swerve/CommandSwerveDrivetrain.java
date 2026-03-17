@@ -74,6 +74,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private final SwerveRequest.SysIdSwerveRotation m_rotationCharacterization = new SwerveRequest.SysIdSwerveRotation();
     private final SendableChooser<String> startPoseChooser = new SendableChooser<>();
 
+    private double distanceToHub;
+    private double xDistanceToHub;
+
     /* SysId routine for characterizing translation. This is used to find PID gains for the drive motors. */
     private final SysIdRoutine m_sysIdRoutineTranslation = new SysIdRoutine(
         new SysIdRoutine.Config(
@@ -280,7 +283,29 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             });
         }
 
+
+
+        if (DriverStation.getAlliance().get() == Alliance.Red) {
+            distanceToHub = (LocationConstants.RED_HUB_AIM_POSE.getTranslation().getDistance(getPose().getTranslation()));
+            xDistanceToHub = (Math.abs(LocationConstants.RED_HUB_AIM_POSE.getTranslation().getX() - getPose().getTranslation().getX()));
+        } else {
+            distanceToHub = (LocationConstants.BLUE_HUB_AIM_POSE.getTranslation().getDistance(getPose().getTranslation()));
+            xDistanceToHub = (Math.abs(LocationConstants.BLUE_HUB_AIM_POSE.getTranslation().getX() - getPose().getTranslation().getX()));
+        }
+
+
         updateStartConditions();
+    }
+
+    public double getDistanceToHub(){
+        return distanceToHub;
+    }
+    public double getXDistanceToHub() {
+        return xDistanceToHub;
+    }
+
+    public Pose2d getPose() {
+        return getSwerveDriveState().Pose;
     }
 
     public StatusSignal<Angle> getHeadingStatusSignalType(){
@@ -447,4 +472,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             }
         }
     }
+
+    
 }

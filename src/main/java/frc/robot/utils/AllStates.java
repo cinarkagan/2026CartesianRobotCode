@@ -8,9 +8,16 @@ public class AllStates {
         SHOOT,
         REVERSE
     }
+    public static enum FeederStates {
+        IDLE,
+        KILL,
+        FEED,
+        REVERSE
+    }
     public static enum MachineStates {
         SHOOT,
         IDLE,
-        
+        INTAKE,
+        INTAKE_CLOSE
     }
 }
