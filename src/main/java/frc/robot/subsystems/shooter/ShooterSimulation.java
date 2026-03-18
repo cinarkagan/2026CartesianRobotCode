@@ -147,6 +147,10 @@ public void stateMachine() {
     public void shooterReverse() {
         goalRPM = ShooterConstants.REVERSE_RPM;
     }
+    @Override
+    public void shooterTest() {
+        goalRPM = SmartDashboard.getNumber("TestShooterRPM", ShooterConstants.IDLE_RPM);
+    }
 
     @Override
     public void requestState(ShooterStates state) {

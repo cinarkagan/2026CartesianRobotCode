@@ -1,7 +1,6 @@
 package frc.robot.constants;
 
 import com.ctre.phoenix6.CANBus;
-import com.ctre.phoenix6.configs.TalonFXConfiguration;
 
 public class ShooterConstants {
     public static CANBus canbus = new CANBus("rio");

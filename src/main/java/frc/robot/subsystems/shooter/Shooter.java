@@ -12,4 +12,5 @@ public abstract class Shooter extends SubsystemBase {
     public abstract void shooterLowPower();
     public abstract void shooterShoot();
     public abstract void shooterReverse();
+    public abstract void shooterTest();
 }

@@ -6,13 +6,15 @@ public class AllStates {
         LOW_POWER,
         KILL,
         SHOOT,
-        REVERSE
+        REVERSE,
+        TEST
     }
     public static enum FeederStates {
         IDLE,
         KILL,
         FEED,
-        REVERSE
+        REVERSE,
+        TEST
     }
     public static enum MachineStates {
         SHOOT,

@@ -11,6 +11,7 @@ import frc.robot.subsystems.shooter.ShooterActions.ShooterKillActionCommand;
 import frc.robot.subsystems.shooter.ShooterActions.ShooterLowPowerActionCommand;
 import frc.robot.subsystems.shooter.ShooterActions.ShooterReverseActionCommand;
 import frc.robot.subsystems.shooter.ShooterActions.ShooterShootActionCommand;
+import frc.robot.subsystems.shooter.ShooterActions.ShooterTestActionCommand;
 import frc.robot.subsystems.shooter.ShooterUtils.ShooterCalculator;
 import frc.robot.subsystems.swerve.CommandSwerveDrivetrain;
 import frc.robot.utils.AllStates;
@@ -58,6 +59,8 @@ public class ShooterSubsystem extends Shooter {
     private ShooterLowPowerActionCommand shooterLowPowerActionCommand;
     private ShooterShootActionCommand shooterShootActionCommand;
     private ShooterReverseActionCommand shooterReverseActionCommand;
+    private ShooterTestActionCommand shooterTestActionCommand;
+
 
     private final ShooterCalculator shooterCalc;
 
@@ -108,6 +111,7 @@ public class ShooterSubsystem extends Shooter {
         shooterLowPowerActionCommand = new ShooterLowPowerActionCommand(this);
         shooterShootActionCommand    = new ShooterShootActionCommand(this);
         shooterReverseActionCommand  = new ShooterReverseActionCommand(this);
+        shooterTestActionCommand = new ShooterTestActionCommand(this);
     }
 
     @Override
@@ -157,36 +161,45 @@ public class ShooterSubsystem extends Shooter {
             && velocity < (goalRPM + ShooterConstants.rpmTol);
     }
 
-public void stateMachine() {
-    if (currentState == requestedState) {
-        switch (currentState) {
-            case IDLE:
-                if (!shooterIdleActionCommand.isScheduled())
-                    CommandScheduler.getInstance().schedule(shooterIdleActionCommand);
-                break;
-            case KILL:
-                if (!shooterKillActionCommand.isScheduled())
-                    CommandScheduler.getInstance().schedule(shooterKillActionCommand);
-                break;
-            case LOW_POWER:
-                if (!shooterLowPowerActionCommand.isScheduled())
-                    CommandScheduler.getInstance().schedule(shooterLowPowerActionCommand);
-                break;
-            case SHOOT:
-                if (!shooterShootActionCommand.isScheduled())
-                    CommandScheduler.getInstance().schedule(shooterShootActionCommand);
-                break;
-            case REVERSE:
-                if (!shooterReverseActionCommand.isScheduled())
-                    CommandScheduler.getInstance().schedule(shooterReverseActionCommand);
-                break;
+    public void stateMachine() {
+        if (currentState == requestedState) {
+            switch (currentState) {
+                case IDLE:
+                    if (!shooterIdleActionCommand.isScheduled())
+                        CommandScheduler.getInstance().schedule(shooterIdleActionCommand);
+                    break;
+                case KILL:
+                    if (!shooterKillActionCommand.isScheduled())
+                        CommandScheduler.getInstance().schedule(shooterKillActionCommand);
+                    break;
+                case LOW_POWER:
+                    if (!shooterLowPowerActionCommand.isScheduled())
+                        CommandScheduler.getInstance().schedule(shooterLowPowerActionCommand);
+                    break;
+                case SHOOT:
+                    if (!shooterShootActionCommand.isScheduled())
+                        CommandScheduler.getInstance().schedule(shooterShootActionCommand);
+                    break;
+                case REVERSE:
+                    if (!shooterReverseActionCommand.isScheduled())
+                        CommandScheduler.getInstance().schedule(shooterReverseActionCommand);
+                    break;
+                case TEST:
+                    if (!shooterTestActionCommand.isScheduled())
+                        CommandScheduler.getInstance().schedule(shooterTestActionCommand);
+                    break;
+                default: //stateless olacağı olursa
+                    if (!shooterIdleActionCommand.isScheduled())
+                        CommandScheduler.getInstance().schedule(shooterIdleActionCommand);
+                    requestState(ShooterStates.IDLE);
+                    break;
+            }
+        } else {
+            lastState = currentState;
+            currentState = requestedState;
+            stateMachine();
         }
-    } else {
-        lastState = currentState;
-        currentState = requestedState;
-        stateMachine();
     }
-}
 
     @Override
     public void shooterIdle() {
@@ -211,6 +224,11 @@ public void stateMachine() {
     @Override
     public void shooterReverse() {
         goalRPM = ShooterConstants.REVERSE_RPM;
+    }
+
+    @Override
+    public void shooterTest() {
+        goalRPM = SmartDashboard.getNumber("TestShooterRPM", ShooterConstants.IDLE_RPM);
     }
 
     @Override
